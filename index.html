@@ -18,13 +18,20 @@
 	<body>
 
 		<script src="js/three.min.js"></script>
-		<script src="js/lib.js"></script>
+		
 		<script src="js/TrackballControls.js"></script>
+		<script src="js/physi.js"></script>
+		<script>
+			'use strict';
+				
+			Physijs.scripts.worker = '/js/physijs_worker.js';
+			Physijs.scripts.ammo = '/js/ammo.js';
+		</script>
+		<script src="js/lib.js"></script>
 		<script src="js/Finger.js"></script>
 		<script src="js/Thumb.js"></script>
 		<script src="js/dat.min.js"></script>
 		<script src="js/datui.js"></script>
-
 		<script>
 			var start = Date.now()
 			var container;
@@ -51,7 +58,7 @@
 
 			var thumbParts
 
-			
+			var cylinder
 
 			init();
 			animate();
@@ -72,7 +79,15 @@
 				controls.addEventListener( 'change', render );
 
 
-				scene = new THREE.Scene();
+				scene = new Physijs.Scene;
+				scene.setGravity(new THREE.Vector3( 0, -1, 0 ));
+				scene.addEventListener(
+					'update',
+					function() {
+						scene.simulate( undefined, 1 );
+					}
+				);
+
 				scene.fog = new THREE.Fog( 0xffffff, 1, 10000 );
 
 
@@ -82,7 +97,9 @@
 				var handXOffset = 100;
 
 
-				armGroup = new THREE.Object3D()
+				// armGroup = new THREE.Object3D()
+				armGroup = ballGroup()
+				armGroup.mass = 0;//so it doesn't fall
 				armGroup.position.x = handXOffset / -1.25
 
 					forearmGroup = ballGroup()
@@ -123,11 +140,17 @@
 							handGroup.add(lineTo(new THREE.Vector3(), thumbHandJoint.position))
 							handGroup.add(lineTo(fingers["pointer"].position, thumbHandJoint.position))
 
+						forearmGroup.addEventListener( 'collision', function( obj, relative_velocity, relative_rotation, contact_normal ) {
+					    	console.log("Forearmgroup")
+						});
 						forearmGroup.add(handGroup)
 						forearmGroup.add(lineTo(new THREE.Vector3(), handGroup.position))
 
+					armGroup.addEventListener( 'collision', function( obj, relative_velocity, relative_rotation, contact_normal ) {
+				    	console.log("Armgroup")
+					});
 					armGroup.add(forearmGroup)
-
+					
 				scene.add(armGroup)
 
 
@@ -137,7 +160,40 @@
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				renderer.sortObjects = false;
 
+				var cylinderRadius = 80
+				var cylinderHeight = 10
+				var cylinderGeometry = new THREE.CylinderGeometry(cylinderRadius, cylinderRadius, cylinderHeight)
+
+				cylinder = new Physijs.CylinderMesh(cylinderGeometry, material)
+
+				cylinder.position.set(-5, 75, 0)
+
+				cylinder.addEventListener( 'collision', function( obj, relative_velocity, relative_rotation, contact_normal ) {
+				    console.log("OUCH")
+				    console.log(obj)
+				    console.log(obj.origin)
+				});
+
+				
+				
+				scene.add(cylinder)
+				setTimeout(function(){
+					scene.add(groupPointObject)
+				}, 500)
+
 				container.appendChild( renderer.domElement );
+
+				
+
+				//all elements have been added to the scene, now time to create collision points
+				// var pointObject = new THREE.Object3D()
+				// for(var i = 0; i < groupPoints.length; i++){
+				// 	console.log(groupPoints)
+				// 	var groupPoint = groupPoints[i]
+				// 	var groupPointPosition = 
+				// }
+				// scene.add(pointObject)
+				
 
 				window.addEventListener( 'resize', onWindowResize, false );
 
@@ -176,7 +232,7 @@
 			}
 
 			function render() {
-
+				
 				var time = (Date.now() - start) * 0.001;
 
 				updateColors(0.0025)
@@ -193,16 +249,19 @@
 					curlHand(handCurl)
 					miscControls.hand = handCurl
 
+
 				} else {
 					start = Date.now()
 				}
-				
-				
-				
 
+				updateGroupPoints()
+
+				scene.simulate()
 				camera.lookAt( scene.position );
 
 				renderer.render( scene, camera );
+
+				
 
 			}
 
