@@ -8,6 +8,8 @@ ThreeArm is a threejs powered arm model, which can be controlled through code or
 
 ThreeArm will be connected to an EMG, in order to visualize results from the EMG and allow users to virtually recreate their arm motions.
 
+The repository for ThreeArm's EMG control is located [here](http://github.com/mjkaufer/MyoThreeArm)
+
 ## Features
 
 * Control of all four fingers
